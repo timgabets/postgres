@@ -845,6 +845,14 @@ static const BuiltinScript builtin_script[] =
              "JOIN pgbench_clients c ON a.client_id = c.id\n"
              "WHERE a.agreement = substr(md5(:customer_id::text), 1, 16)"
 	},
+	{
+		"select-cards-clients",
+		"<builtin: select agreements join clients>",
+		"\\set customer_id random(1, " CppAsString2(ncustomers) " * :scale)\n"
+		"SELECT ca.pan, ca.pan_hash, ca.ucid, c.shard FROM pgbench_cards ca\n"
+             "JOIN pgbench_clients c ON ca.client_id = c.id\n"
+             "WHERE ca.ucid = (1177000000 + :customer_id)"
+	},
 };
 
 
@@ -5110,7 +5118,7 @@ initGenerateDataServerSide(PGconn *con)
 
 	printfPQExpBuffer(&sql,
 					  "insert into pgbench_cards(ucid,pan,client_id,pan_hash,key_id,iv) "
-					  "select client_id as ucid, "
+					  "select (1177000000 + client_id) as ucid, "
 					  "encode(sha256(random()::text::bytea), 'hex') as pan, "
 					  "client_id, "
 					  "encode(sha256(random()::text::bytea), 'hex') as pan_hash, "
