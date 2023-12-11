@@ -806,7 +806,7 @@ static const BuiltinScript builtin_script[] =
 		"END;\n"
 	},
 	{
-		"select-cards",
+		"select-card",
 		"<builtin: select only>",
 		"\\set aid random(1, " CppAsString2(ncards) " * :scale)\n"
 		"SELECT pan, pan_hash, client_id FROM pgbench_cards WHERE ucid = :aid;\n"
@@ -5254,6 +5254,7 @@ initCreatePKeys(PGconn *con)
 	static const char *const DDLINDEXes[] = {
 		"alter table pgbench_clients add primary key (id)",
 		"create index if not exists pgbench_agreements_client_id on pgbench_agreements(client_id)",
+		"create index if not exists pgbench_agreements_agreement_id on pgbench_agreements(agreement)",
 		"alter table pgbench_cards add primary key (ucid)"
 	};
 	int			i;
