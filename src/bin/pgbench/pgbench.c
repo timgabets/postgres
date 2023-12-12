@@ -806,8 +806,8 @@ static const BuiltinScript builtin_script[] =
 		"END;\n"
 	},
 	{
-		"select-card",
-		"<builtin: select only>",
+		"select-single-card",
+		"<builtin: select single card only>",
 		"\\set aid random(1, " CppAsString2(ncards) " * :scale)\n"
 		"SELECT pan, pan_hash, client_id FROM pgbench_cards WHERE ucid = :aid;\n"
 	},
@@ -823,7 +823,7 @@ static const BuiltinScript builtin_script[] =
 	},
 	{
 		"select-batch-100",
-		"<builtin: select batch 50>",
+		"<builtin: select batch 100>",
 		"\\set c01 random(1, " CppAsString2(ncards) " * :scale)\n"
 		"\\set c02 random(1, " CppAsString2(ncards) " * :scale)\n"
 		"\\set c03 random(1, " CppAsString2(ncards) " * :scale)\n"
@@ -946,7 +946,7 @@ static const BuiltinScript builtin_script[] =
 	},
 	{
 		"select-cards-clients",
-		"<builtin: select agreements join clients>",
+		"<builtin: select cards join clients>",
 		"\\set customer_id random(1, " CppAsString2(ncustomers) " * :scale)\n"
 		"SELECT ca.pan, ca.pan_hash, ca.ucid, c.shard FROM pgbench_cards ca\n"
              "JOIN pgbench_clients c ON ca.client_id = c.id\n"
@@ -5218,9 +5218,9 @@ initGenerateDataServerSide(PGconn *con)
 	printfPQExpBuffer(&sql,
 					  "insert into pgbench_cards(ucid,pan,client_id,pan_hash,key_id,iv) "
 					  "select (1177000000 + client_id) as ucid, "
-					  "encode(sha256(random()::text::bytea), 'hex') as pan, "
+					  "encode(sha256((1177000000 + client_id)::text::bytea), 'hex') as pan, "
 					  "client_id, "
-					  "encode(sha256(random()::text::bytea), 'hex') as pan_hash, "
+					  "encode(sha256(client_id::text::bytea), 'hex') as pan_hash, "
 					  "0 as key_id, "
 					  "substr(md5(random()::text), 1, 24) as iv "
 					  "from generate_series(1, " INT64_FORMAT ") as client_id",
@@ -5255,6 +5255,8 @@ initCreatePKeys(PGconn *con)
 		"alter table pgbench_clients add primary key (id)",
 		"create index if not exists pgbench_agreements_client_id on pgbench_agreements(client_id)",
 		"create index if not exists pgbench_agreements_agreement_id on pgbench_agreements(agreement)",
+		"create index if not exists pgbench_cards_pan on pgbench_cards(pan)",
+		"create index if not exists pgbench_cards_pan_hash on pgbench_cards(pan_hash)",
 		"alter table pgbench_cards add primary key (ucid)"
 	};
 	int			i;
