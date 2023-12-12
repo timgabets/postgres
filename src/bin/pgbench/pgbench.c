@@ -952,6 +952,47 @@ static const BuiltinScript builtin_script[] =
              "JOIN pgbench_clients c ON ca.client_id = c.id\n"
              "WHERE ca.ucid = (1177000000 + :customer_id)"
 	},
+	{
+		/*
+			NOTE: в нашей схеме хранения данных
+			client_id генерируется в диапазоне [1, ncustomers * scale]
+			ucid = (1177000000 + client_id)
+			pgbench_cards.pan = sha256(ucid)
+			pgbench_cards.pan_hash = sha256(client_id)
+
+		*/
+		"select-pan-hash-keyid",
+		"<builtin: select cards by (pan, pan_hash, key_id)>",
+		"\\set c1 random(1, " CppAsString2(ncustomers) " * :scale)\n"
+		"\\set c1_keyid 0\n"
+		"\\set c2 random(1, " CppAsString2(ncustomers) " * :scale)\n"
+		"\\set c2_keyid 0\n"
+		"\\set c3 random(1, " CppAsString2(ncustomers) " * :scale)\n"
+		"\\set c3_keyid 0\n"
+		"WITH \n"
+		"i_hashes AS (\n"
+		    "SELECT row_number() OVER () n, x AS pan_hash \n"
+		    "FROM (SELECT unnest(ARRAY[encode(sha256(:c1::text::bytea), 'hex'), encode(sha256(:c2::text::bytea), 'hex'), encode(sha256(:c3::text::bytea), 'hex')]) x) s\n"
+		"), \n"
+		"i_key_ids AS (\n"
+		    "SELECT row_number() OVER () n, x AS key_id \n"
+		    "FROM (SELECT unnest(ARRAY[:c1_keyid, :c2_keyid, :c3_keyid]) x) s\n"
+		"),\n"
+		"i_pans as (\n"
+		    "SELECT row_number() OVER () n, x AS pan \n"
+		    "FROM (SELECT unnest(ARRAY[encode(sha256((1177000000+:c1)::text::bytea), 'hex'), encode(sha256((1177000000+:c2)::text::bytea), 'hex'), encode(sha256((1177000000+:c3)::text::bytea), 'hex')]) x) s\n"
+		"),\n"
+		"i_tuples AS (\n"
+		    "SELECT h.pan_hash, k.key_id, p.pan \n"
+		    "FROM i_hashes h\n"
+		    "join i_key_ids k on h.n = k.n\n"
+		    "JOIN i_pans p ON h.n = p.n\n"
+		")\n"
+		"select t.pan, ca.ucid, ca.pan_hash, ca.pan, ca.key_id, ca.iv, c.client_id, c.shard \n"
+		"from pgbench_cards ca\n"
+		"join i_tuples t on ca.pan_hash = t.pan_hash and ca.key_id = t.key_id \n"
+		"join pgbench_clients c on ca.client_id = c.id;\n"
+	},
 };
 
 
